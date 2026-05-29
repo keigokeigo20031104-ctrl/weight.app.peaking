@@ -60,6 +60,8 @@
     .dash-stat { background:#f7faf8; border:1px solid var(--line); border-radius:14px; padding:12px; text-align:center; }
     .dash-stat span { display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; }
     .dash-stat b { display:block; font-size:24px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
+    .dash-stat b.warn { color:var(--danger); }
+    .dash-stat b.ok   { color:var(--accent); }
 
     /* ── AI card ── */
     .ai-card-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
@@ -259,6 +261,9 @@
   <div class="tab-panel" id="tab-records" hidden>
     <section class="card">
       <h2>個別記録サマリー</h2>
+      <select id="userFilter" style="margin-bottom:10px">
+        <option value="">全入力者</option>
+      </select>
       <p id="recordsHint" class="hint" style="margin-bottom:8px"></p>
       <div class="stats-grid">
         <div class="stat-card"><span>最新体重</span><b id="latest">--</b></div>
@@ -273,7 +278,7 @@
         <table>
           <thead>
             <tr>
-              <th>日付</th><th>体重</th><th>kcal</th>
+              <th>入力者</th><th>日付</th><th>体重</th><th>kcal</th>
               <th>食事</th><th>トレーニング</th><th>メモ</th>
               <th>学年</th><th>カテゴリ</th>
             </tr>
@@ -292,6 +297,15 @@
       <div class="btn-row">
         <button class="secondary" id="clearSelection">全入力者を表示</button>
         <button class="danger" id="deleteUser">選択中の入力者を削除</button>
+      </div>
+    </section>
+    <section class="card" id="userSummaryCard" style="display:none">
+      <h2 id="userSummaryTitle">-- のサマリー</h2>
+      <div class="stats-grid">
+        <div class="stat-card"><span>最新体重</span><b id="u-latest">--</b></div>
+        <div class="stat-card"><span>7日変化</span><b id="u-diff7">--</b></div>
+        <div class="stat-card"><span>30日変化</span><b id="u-diff30">--</b></div>
+        <div class="stat-card"><span>平均摂取</span><b id="u-avgCal">--</b></div>
       </div>
     </section>
   </div>
@@ -398,8 +412,17 @@
     $("dash-records").textContent = store.records.length;
     $("dash-users").textContent = byUser().length;
     $("dash-unread").textContent = cachedFeedbacks.filter(x => !x.read).length;
-    $("dash-notices").textContent = cachedNotices.length;
+    const noticeCount = cachedNotices.length;
+    $("dash-notices").textContent = noticeCount;
+    $("dash-notices").className = noticeCount > 0 ? "ok" : "";
+
     const unreadCount = cachedFeedbacks.filter(x => !x.read).length;
+    $("dash-unread").textContent = unreadCount;
+    $("dash-unread").className = unreadCount > 0 ? "warn" : "";
+
+    const recCount = store.records.length;
+    $("dash-records").className = recCount > 0 ? "ok" : "";
+
     const badge = $("feedbackBadge");
     if (unreadCount > 0) { badge.textContent = unreadCount; badge.classList.add("show"); }
     else { badge.classList.remove("show"); }
@@ -433,33 +456,65 @@
       : '<p class="empty-state">まだ入力者データがありません。<br>サーバーから記録を取得すると、ここに入力者が表示されます。</p>';
     document.querySelectorAll("[data-u]").forEach(b => b.onclick = () => { store.selected = b.dataset.u; save(); render(); });
 
+    // ── 入力者フィルタ select を更新 ──
+    const uf = $("userFilter");
+    const ufVal = store.selected;
+    uf.innerHTML = '<option value="">全入力者</option>' +
+      byUser().map(u => `<option value="${esc(u)}"${ufVal === u ? " selected" : ""}>${esc(u)}</option>`).join("");
+
     const rows = currentRecords();
-    $("recordsHint").textContent = store.selected ? `選択中: ${store.selected}` : "すべての入力者の記録を表示しています。";
-    const latest = rows.at(-1);
-    $("latest").textContent = latest ? latest.weight + " kg" : "--";
-    function diff(days) {
-      if (rows.length < 2) return "--";
-      const end = new Date(rows.at(-1).date);
-      const recent = rows.filter(r => (end - new Date(r.date)) / 86400000 < days);
-      return recent.length >= 2 ? (Number(recent.at(-1).weight) - Number(recent[0].weight)).toFixed(1) + " kg" : "--";
+    $("recordsHint").textContent = store.selected
+      ? `絞り込み中: ${store.selected}（${rows.length}件）`
+      : `全入力者の記録を表示中（${rows.length}件）`;
+
+    function calcStats(recs) {
+      const latest = recs.at(-1);
+      const latestW = latest ? latest.weight + " kg" : "--";
+      function d(days) {
+        if (recs.length < 2) return "--";
+        const end = new Date(recs.at(-1).date);
+        const recent = recs.filter(r => (end - new Date(r.date)) / 86400000 < days);
+        return recent.length >= 2 ? (Number(recent.at(-1).weight) - Number(recent[0].weight)).toFixed(1) + " kg" : "--";
+      }
+      const cals = recs.map(r => Number(r.calories)).filter(Number.isFinite);
+      const avg = cals.length ? Math.round(cals.reduce((a, b) => a + b, 0) / cals.length) + " kcal" : "--";
+      return { latestW, d7: d(7), d30: d(30), avg };
     }
-    $("diff7").textContent = diff(7);
-    $("diff30").textContent = diff(30);
-    const cals = rows.map(r => Number(r.calories)).filter(Number.isFinite);
-    $("avgCal").textContent = cals.length ? Math.round(cals.reduce((a, b) => a + b, 0) / cals.length) + " kcal" : "--";
+
+    const st = calcStats(rows);
+    $("latest").textContent = st.latestW;
+    $("diff7").textContent = st.d7;
+    $("diff30").textContent = st.d30;
+    $("avgCal").textContent = st.avg;
+
+    // ── 入力者タブのサマリー ──
+    const summaryCard = $("userSummaryCard");
+    if (store.selected) {
+      const ust = calcStats(rows);
+      $("userSummaryTitle").textContent = `${store.selected} のサマリー`;
+      $("u-latest").textContent = ust.latestW;
+      $("u-diff7").textContent = ust.d7;
+      $("u-diff30").textContent = ust.d30;
+      $("u-avgCal").textContent = ust.avg;
+      summaryCard.style.display = "";
+    } else {
+      summaryCard.style.display = "none";
+    }
+
     $("recordRows").innerHTML = rows.length
       ? [...rows].reverse().map(r =>
           `<tr>
+            <td style="white-space:nowrap;font-weight:700">${esc(r.user || "")}</td>
             <td style="white-space:nowrap">${esc(r.date)}</td>
             <td>${esc(String(r.weight || ""))}</td>
             <td>${r.calories ?? ""}</td>
-            <td style="max-width:120px">${(r.meals || []).map(m => esc(`${m.time || ""} ${m.text || ""}`)).join("<br>")}</td>
-            <td style="max-width:140px">${(r.training || []).map(t => esc(`${t.exercise || ""} ${volume([t]).toFixed(1)}`)).join("<br>")}</td>
-            <td style="max-width:120px">${esc(r.note || "")}</td>
+            <td style="max-width:110px">${(r.meals || []).map(m => esc(`${m.time || ""} ${m.text || ""}`)).join("<br>")}</td>
+            <td style="max-width:130px">${(r.training || []).map(t => esc(`${t.exercise || ""} ${volume([t]).toFixed(1)}`)).join("<br>")}</td>
+            <td style="max-width:110px">${esc(r.note || "")}</td>
             <td>${esc(r.grade || "")}</td>
             <td>${esc(r.category || "")}</td>
           </tr>`).join("")
-      : `<tr><td colspan="8" class="empty-state">まだデータがありません。サーバーから取得すると、ここに表示されます。</td></tr>`;
+      : `<tr><td colspan="9" class="empty-state">まだデータがありません。サーバーから取得すると、ここに表示されます。</td></tr>`;
     updateDashboard();
   }
 
@@ -493,6 +548,7 @@
   };
   $("loadLocal").onclick = () => { render(); $("serverMsg").textContent = "保存済みデータを表示しました。"; };
   $("clearSelection").onclick = () => { store.selected = ""; save(); render(); };
+  $("userFilter").onchange = () => { store.selected = $("userFilter").value; save(); render(); };
   $("deleteUser").onclick = () => {
     if (!store.selected) { alert("入力者を選択してください"); return; }
     if (confirm(store.selected + " の記録をすべて削除しますか？")) {

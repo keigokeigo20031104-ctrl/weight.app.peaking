@@ -1,0 +1,9 @@
+{
+  "name": "Weight Log",
+  "short_name": "Weight",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f6f2",
+  "theme_color": "#176b5d",
+  "icons": []
+}

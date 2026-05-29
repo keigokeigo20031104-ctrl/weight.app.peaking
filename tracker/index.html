@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#176b5d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Weight Log">
+  <title>Weight Log</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <style>
+    :root{
+      --bg:#f5f6f2;--ink:#17211f;--muted:#65726e;--line:#d8dfdb;--card:#fff;
+      --accent:#176b5d;--accent2:#e3f2ee;--danger:#b42318;--blue:#1d6fb8;--shadow:0 14px 36px rgba(25,39,36,.10)
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.5}
+    button,input,textarea,select{font:inherit;max-width:100%;min-width:0}
+    .app{width:min(100%,980px);margin:0 auto;padding:calc(env(safe-area-inset-top) + 16px) 12px calc(env(safe-area-inset-bottom) + 80px)}
+    header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
+    h1{margin:0;font-size:30px;line-height:1.05} h2{margin:0 0 10px;font-size:18px}
+    .sub{color:var(--muted);font-size:13px;margin:4px 0 0}.badge{border-radius:999px;background:var(--accent2);color:#075447;font-size:12px;font-weight:800;padding:6px 10px}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:var(--shadow)}
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row .small{flex:0 0 auto}
+    label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:6px 0 3px}
+    input,textarea,select{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px;background:#fff;color:var(--ink)}
+    textarea{min-height:72px;resize:vertical}
+    button{border:0;border-radius:12px;padding:10px 12px;background:var(--accent);color:white;font-weight:800;cursor:pointer}
+    button.secondary{background:#eef2ef;color:var(--ink);border:1px solid var(--line)} button.danger{background:var(--danger)}
+    button.ghost{background:transparent;color:var(--accent);border:1px solid var(--line)}
+    .tabs{position:fixed;left:0;right:0;bottom:0;background:#ffffffdd;backdrop-filter:blur(12px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:8px calc(env(safe-area-inset-right) + 8px) calc(env(safe-area-inset-bottom) + 8px) calc(env(safe-area-inset-left) + 8px)}
+    .tabs a{color:var(--muted);text-decoration:none;font-size:12px;font-weight:800;padding:8px 10px;border-radius:999px}.tabs a.active{background:var(--accent2);color:var(--accent)}
+    .stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.stat{background:#f7faf8;border:1px solid var(--line);border-radius:14px;padding:10px}.stat b{font-size:20px;display:block}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.day{min-height:54px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:5px;font-size:11px;overflow:hidden}.day.has{background:var(--accent2)}.day .d{font-weight:900}
+    .train-item,.record-item,.meal-item,.template-row{border:1px solid var(--line);border-radius:14px;padding:10px;margin-top:8px;background:#fff}
+    .parts{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.part{flex:0 0 auto;padding:8px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--ink)}.part.active{background:var(--accent);color:white}
+    .hidden{display:none!important}.muted{color:var(--muted)}.right{text-align:right}.warn{color:#9a6b12}.diff.up{color:var(--danger)}.diff.down{color:var(--blue)}
+    #aiFeedbackResult.ai-text{margin-top:10px;padding:12px;background:var(--accent2);border-radius:12px;font-size:14px;line-height:1.7;white-space:pre-line;color:#075447}
+    #aiFeedbackResult.ai-empty{margin-top:10px;padding:12px;background:#f7f7f7;border-radius:12px;font-size:14px;color:var(--muted);white-space:pre-line}
+    #aiFeedbackResult.ai-error{margin-top:10px;padding:12px;background:#fff0f0;border-radius:12px;font-size:14px;color:var(--danger)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.36);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.show{display:flex}.modal .panel{width:min(100%,560px);max-height:90vh;overflow:auto;background:white;border-radius:20px;padding:16px}
+    @media(min-width:820px){.grid{grid-template-columns:1.1fr .9fr}.span{grid-column:1/-1}.stats{grid-template-columns:repeat(4,1fr)}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div><h1>Weight Log</h1><p class="sub">体重・食事・トレーニングをまとめて記録</p></div>
+    <div class="badge" id="streak">0日</div>
+  </header>
+
+  <div class="grid">
+    <section class="card" id="home">
+      <div class="row">
+        <button class="secondary small" id="prevDay">‹</button>
+        <input type="date" id="date">
+        <button class="secondary small" id="nextDay">›</button>
+      </div>
+      <label>入力者名</label><input id="user" placeholder="名前">
+      <div class="row">
+        <div><label>学年</label><select id="grade"><option>1年</option><option>2年</option><option>3年</option><option>その他</option></select></div>
+        <div><label>カテゴリ</label><select id="category"><option>ボディ</option><option>パワー</option></select></div>
+      </div>
+      <label>体重 kg</label><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="例 70.5">
+      <label>摂取カロリー kcal</label><input id="calories" type="number" inputmode="numeric" placeholder="例 2500">
+      <label>メモ</label><textarea id="note" placeholder="体調、睡眠、反省など"></textarea>
+      <div class="row"><button id="save">保存</button><button class="secondary" id="clearInput">入力クリア</button><button class="ghost hidden" id="sendAdmin">管理者に記録を送信</button></div>
+    </section>
+
+    <section class="card" id="summary">
+      <h2>状態サマリー</h2>
+      <div class="stats">
+        <div class="stat"><span>最新</span><b id="latestWeight">-- kg</b><small id="latestDate">未記録</small></div>
+        <div class="stat"><span>7日変化</span><b id="weekDiff">-- kg</b><small>直近7日内の最初との差</small></div>
+        <div class="stat"><span>平均摂取</span><b id="avgCal">-- kcal</b><small>直近7日</small></div>
+        <div class="stat"><span>総合負荷量</span><b id="totalVolume">0.0</b><small>kg × rep</small></div>
+      </div>
+      <h2 style="margin-top:14px">目標設定</h2>
+      <div class="row"><div><label>目標体重 kg</label><input id="targetWeight" type="number" step="0.1"></div><div><label>目標日程</label><input id="targetDate" type="date"></div></div>
+      <button class="secondary" id="saveTarget">目標を保存</button>
+      <p class="muted" id="targetSummary">目標未設定</p>
+    </section>
+
+    <section class="card span" id="training">
+      <h2>トレーニング記録 <span class="muted" id="exerciseCount">0種目</span></h2>
+      <div class="stats">
+        <div class="stat"><span>7日間</span><b id="vol7">--</b><small>負荷量 kg × rep</small></div>
+        <div class="stat"><span>28日間</span><b id="vol28">--</b><small>負荷量 kg × rep</small></div>
+        <div class="stat"><span>合計セット</span><b id="setCount">0</b><small>セット</small></div>
+        <div class="stat"><span>合計レップ</span><b id="repCount">0</b><small>回</small></div>
+      </div>
+      <h2 style="margin-top:14px">テンプレート / 前回記録</h2>
+      <div class="parts" id="partButtons"></div>
+      <div id="templateList"></div>
+      <div class="row"><button class="secondary" id="loadPrevious">前回を呼び出し</button><button id="addExercise">＋ 種目を追加</button><button class="secondary" id="clearTraining">入力クリア</button></div>
+      <div id="trainingList"></div>
+    </section>
+
+    <section class="card" id="meals">
+      <h2>カロリー・食事記録</h2>
+      <div id="mealList"></div>
+      <div class="row"><input id="mealTime" type="time"><input id="mealText" placeholder="食事内容"></div>
+      <div class="row"><button class="secondary" id="addMeal">食事を追加</button><button class="secondary" id="saveMealTemplate">よく使う食事に保存</button></div>
+      <div id="mealTemplates" class="muted"></div>
+    </section>
+
+    <section class="card" id="chart">
+      <h2>体重グラフ</h2>
+      <div class="row"><button class="secondary range" data-range="30">30日</button><button class="secondary range" data-range="90">90日</button><button class="secondary range" data-range="all">全期間</button></div>
+      <canvas id="weightChart" height="180"></canvas>
+      <p class="muted">薄い線は日々の記録です。2件以上記録すると表示されます。</p>
+    </section>
+
+    <section class="card span" id="aiFeedbackSection">
+      <h2>AIフィードバック</h2>
+      <p class="muted">今日の体重・食事・トレーニング内容をもとに、短いコメントを表示します。</p>
+      <button id="aiFeedbackBtn">今日の内容をチェック</button>
+      <div id="aiFeedbackResult"></div>
+    </section>
+
+    <section class="card span" id="records">
+      <h2>記録一覧</h2>
+      <div class="row"><button class="secondary" id="exportJson">JSON保存</button><button class="danger" id="deleteAll">全削除</button></div>
+      <p class="muted">同じ日付で保存すると、その日の記録を上書きします。</p>
+      <div id="recordList"></div>
+    </section>
+  </div>
+</div>
+
+<div class="modal" id="feedbackModal"><div class="panel">
+  <div class="row"><h2>意見を送る</h2><button class="secondary small" id="closeFeedback">×</button></div>
+  <label>送信者名（任意）</label><input id="fbName">
+  <label>カテゴリ</label><select id="fbCategory"><option>バグ報告</option><option>機能要望</option><option>その他</option></select>
+  <label>メッセージ *</label><textarea id="fbMessage"></textarea>
+  <button id="sendFeedback">送信する</button>
+</div></div>
+
+<nav class="tabs">
+  <a href="#home" class="active">ホーム</a><a href="#training">トレーニング</a><a href="#summary">体重</a><a href="#meals">カロリー</a><a href="#records">データ</a>
+  <a href="#" id="openFeedback">意見</a>
+</nav>
+
+<script>
+const MODE = "tracker";
+const IS_TEAM = MODE === "tracker";
+const STORE = MODE === "solo" ? "weight-log-solo-v1" : "weight-log-team-v1";
+const $ = (id)=>document.getElementById(id);
+const today = () => new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+const parts = ["脚","胸","背中","肩","腕","その他"];
+const defaultTemplates = {
+  "脚":["スクワット","レッグプレス","レッグカール","カーフレイズ"],
+  "胸":["ベンチプレス","インクラインベンチ","ダンベルプレス","チェストフライ"],
+  "背中":["デッドリフト","ラットプルダウン","ローイング","懸垂"],
+  "肩":["ショルダープレス","サイドレイズ","リアレイズ"],
+  "腕":["アームカール","トライセプスプレスダウン","ナローベンチ"],
+  "その他":["腹筋","有酸素","ストレッチ"]
+};
+let state = { records:{}, target:{}, templates:defaultTemplates, mealTemplates:[] };
+let selectedPart = "脚", range = 30;
+
+function load(){ try{state={...state,...JSON.parse(localStorage.getItem(STORE)||"{}")};}catch{} }
+function persist(){ localStorage.setItem(STORE, JSON.stringify(state)); }
+function recordArray(){ return Object.values(state.records||{}).sort((a,b)=>a.date.localeCompare(b.date)); }
+function volumeOf(training=[]){ return training.reduce((sum,item)=>sum+(item.sets||[]).reduce((s,set)=>s+(Number(set.weight)||0)*(Number(set.reps)||0),0),0); }
+function current(){ return state.records[$("date").value] || {date:$("date").value,user:$("user").value,grade:$("grade").value,category:$("category").value,weight:"",calories:"",note:"",meals:[],training:[]}; }
+
+function renderParts(){
+  $("partButtons").innerHTML = parts.map(p=>`<button type="button" class="part ${p===selectedPart?'active':''}" data-part="${p}">${p}</button>`).join("");
+  $("partButtons").querySelectorAll("button").forEach(b=>b.onclick=()=>{selectedPart=b.dataset.part;renderParts();renderTemplates();});
+}
+function renderTemplates(){
+  const list = state.templates[selectedPart] || [];
+  $("templateList").innerHTML = list.map(name=>`<div class="template-row row"><span>${escapeHtml(name)}</span><button class="secondary small" data-add="${escapeHtml(name)}">追加</button><button class="secondary small" data-del="${escapeHtml(name)}">削除</button></div>`).join("")+
+    `<div class="row"><input id="newTemplate" placeholder="${selectedPart}の種目を追加"><button class="secondary" id="addTemplate">テンプレ追加</button></div>`;
+  $("templateList").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>addTraining(b.dataset.add, selectedPart));
+  $("templateList").querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{state.templates[selectedPart]=(state.templates[selectedPart]||[]).filter(x=>x!==b.dataset.del);persist();renderTemplates();});
+  $("addTemplate").onclick=()=>{const v=$("newTemplate").value.trim(); if(!v)return; state.templates[selectedPart]=[...(state.templates[selectedPart]||[]),v];$("newTemplate").value="";persist();renderTemplates();};
+}
+function addTraining(name="", part=selectedPart){
+  const r = current();
+  r.training = r.training || [];
+  r.training.push({parts:[part], exercise:name, sets:[{weight:null,reps:null,note:""}]});
+  state.records[r.date]=r; persist(); fillForm(r); renderAll();
+}
+function renderTraining(){
+  const r=current(); const list = r.training||[];
+  $("exerciseCount").textContent = `${list.length}種目`;
+  $("trainingList").innerHTML = list.map((item,i)=>`
+    <div class="train-item">
+      <div class="row"><input data-ex="${i}" value="${escapeAttr(item.exercise||'')}" placeholder="種目名"><button class="secondary small" data-addset="${i}">セット追加</button><button class="danger small" data-deltrain="${i}">削除</button></div>
+      ${(item.sets||[]).map((s,j)=>`<div class="row" style="margin-top:6px"><input type="number" step="0.5" inputmode="decimal" data-w="${i},${j}" placeholder="重量" value="${s.weight??''}"><input type="number" inputmode="numeric" data-r="${i},${j}" placeholder="回数" value="${s.reps??''}"><input data-n="${i},${j}" placeholder="メモ" value="${escapeAttr(s.note||'')}"></div>`).join("")}
+    </div>`).join("");
+  $("trainingList").querySelectorAll("[data-ex]").forEach(el=>el.oninput=()=>{r.training[+el.dataset.ex].exercise=el.value;state.records[r.date]=r;persist();renderStats();});
+  $("trainingList").querySelectorAll("[data-w]").forEach(el=>el.oninput=()=>{const [i,j]=el.dataset.w.split(",").map(Number);r.training[i].sets[j].weight=el.value===""?null:Number(el.value);state.records[r.date]=r;persist();renderStats();});
+  $("trainingList").querySelectorAll("[data-r]").forEach(el=>el.oninput=()=>{const [i,j]=el.dataset.r.split(",").map(Number);r.training[i].sets[j].reps=el.value===""?null:Number(el.value);state.records[r.date]=r;persist();renderStats();});
+  $("trainingList").querySelectorAll("[data-n]").forEach(el=>el.oninput=()=>{const [i,j]=el.dataset.n.split(",").map(Number);r.training[i].sets[j].note=el.value;state.records[r.date]=r;persist();});
+  $("trainingList").querySelectorAll("[data-addset]").forEach(b=>b.onclick=()=>{r.training[+b.dataset.addset].sets.push({weight:null,reps:null,note:""});state.records[r.date]=r;persist();renderTraining();renderStats();});
+  $("trainingList").querySelectorAll("[data-deltrain]").forEach(b=>b.onclick=()=>{r.training.splice(+b.dataset.deltrain,1);state.records[r.date]=r;persist();renderAll();});
+}
+function renderMeals(){
+  const r=current(); r.meals=r.meals||[];
+  $("mealList").innerHTML = r.meals.map((m,i)=>`<div class="meal-item row"><span>${m.time||"--:--"} ${escapeHtml(m.text)}</span><button class="danger small" data-delmeal="${i}">削除</button></div>`).join("");
+  $("mealList").querySelectorAll("[data-delmeal]").forEach(b=>b.onclick=()=>{r.meals.splice(+b.dataset.delmeal,1);state.records[r.date]=r;persist();renderMeals();});
+  $("mealTemplates").innerHTML = (state.mealTemplates||[]).map(t=>`<button class="secondary small" data-mealtemp="${escapeAttr(t)}">${escapeHtml(t)}</button>`).join(" ");
+  $("mealTemplates").querySelectorAll("[data-mealtemp]").forEach(b=>b.onclick=()=>{$("mealText").value=b.dataset.mealtemp;});
+}
+function renderStats(){
+  const arr = recordArray();
+  $("streak").textContent = `${arr.length}日`;
+  const latest = [...arr].reverse().find(r=>r.weight);
+  $("latestWeight").textContent = latest ? `${latest.weight} kg` : "-- kg";
+  $("latestDate").textContent = latest ? latest.date : "未記録";
+  const end = new Date($("date").value || today());
+  const recent7 = arr.filter(r=>((end-new Date(r.date))/86400000)>=0 && ((end-new Date(r.date))/86400000)<7);
+  if(recent7.length>=2){const diff=(Number(recent7.at(-1).weight)-Number(recent7[0].weight));$("weekDiff").textContent=(diff>0?"+":"")+diff.toFixed(1)+" kg";$("weekDiff").className=diff>0?"diff up":diff<0?"diff down":"";} else {$("weekDiff").textContent="-- kg";}
+  const cals = recent7.map(r=>Number(r.calories)).filter(Number.isFinite); $("avgCal").textContent = cals.length ? Math.round(cals.reduce((a,b)=>a+b,0)/cals.length)+" kcal" : "-- kcal";
+  const todayVol = volumeOf(current().training||[]); $("totalVolume").textContent=todayVol.toFixed(1);
+  const vols = (days)=>arr.filter(r=>((end-new Date(r.date))/86400000)>=0 && ((end-new Date(r.date))/86400000)<days).reduce((s,r)=>s+volumeOf(r.training),0);
+  $("vol7").textContent=vols(7).toFixed(1); $("vol28").textContent=vols(28).toFixed(1);
+  const train=current().training||[]; $("setCount").textContent=train.reduce((s,i)=>s+(i.sets||[]).length,0); $("repCount").textContent=train.reduce((s,i)=>s+(i.sets||[]).reduce((a,b)=>a+(Number(b.reps)||0),0),0);
+  const target = state.target||{};
+  if(target.weight && latest){ const left=(Number(latest.weight)-Number(target.weight)).toFixed(1); $("targetSummary").textContent=`目標まで ${left} kg / 期日: ${target.date||"--"}`; } else $("targetSummary").textContent="目標未設定";
+}
+function renderRecords(){
+  $("recordList").innerHTML = recordArray().reverse().map(r=>`<div class="record-item"><b>${r.date}</b> ${escapeHtml(r.user||"")} <span>${r.weight||"--"}kg</span> <span>${r.calories||"--"}kcal</span><br><small>${escapeHtml(r.note||"")}</small></div>`).join("");
+}
+function renderChart(){
+  const cvs=$("weightChart"), ctx=cvs.getContext("2d"), arr=recordArray().filter(r=>r.weight);
+  ctx.clearRect(0,0,cvs.width,cvs.height); cvs.width=cvs.clientWidth*devicePixelRatio; cvs.height=180*devicePixelRatio; ctx.scale(devicePixelRatio,devicePixelRatio);
+  const w=cvs.clientWidth,h=180,p=24; if(arr.length<2){ctx.fillText("2件以上記録するとグラフが表示されます。",p,60);return;}
+  const data = range==="all"?arr:arr.slice(-Number(range));
+  const vals=data.map(r=>Number(r.weight)), min=Math.min(...vals)-1,max=Math.max(...vals)+1;
+  ctx.beginPath(); data.forEach((r,i)=>{const x=p+(w-p*2)*(i/(data.length-1)); const y=h-p-(h-p*2)*((Number(r.weight)-min)/(max-min)); if(i)ctx.lineTo(x,y); else ctx.moveTo(x,y);}); ctx.lineWidth=2; ctx.stroke();
+  ctx.fillText(`${min.toFixed(1)}kg`,4,h-p); ctx.fillText(`${max.toFixed(1)}kg`,4,p);
+}
+function renderAll(){ renderStats(); renderTraining(); renderMeals(); renderRecords(); renderChart(); }
+
+function fillForm(r){
+  $("user").value = r.user || $("user").value || "";
+  $("grade").value = r.grade || $("grade").value;
+  $("category").value = r.category || $("category").value;
+  $("weight").value = r.weight ?? "";
+  $("calories").value = r.calories ?? "";
+  $("note").value = r.note || "";
+}
+function saveFromForm(){
+  const d=$("date").value; if(!d)return alert("日付が必要です");
+  const weight=Number($("weight").value); if(!Number.isFinite(weight)||weight<=0)return alert("体重を入力してください");
+  const old=state.records[d]||{date:d, meals:[], training:[]};
+  state.records[d]={...old,date:d,user:$("user").value.trim()||"unknown",grade:$("grade").value,category:$("category").value,weight:Math.round(weight*10)/10,calories:$("calories").value?Math.round(Number($("calories").value)):null,note:$("note").value.trim()};
+  persist(); renderAll();
+}
+function openDate(d){ $("date").value=d; fillForm(current()); renderAll(); }
+function escapeHtml(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function escapeAttr(s){return escapeHtml(s).replace(/"/g,"&quot;");}
+
+$("date").value=today(); load();
+$("sendAdmin").classList.toggle("hidden", !IS_TEAM);
+$("save").onclick=saveFromForm;
+$("clearInput").onclick=()=>{["weight","calories","note"].forEach(id=>$(id).value="");};
+$("prevDay").onclick=()=>{const d=new Date($("date").value);d.setDate(d.getDate()-1);openDate(d.toISOString().slice(0,10));};
+$("nextDay").onclick=()=>{const d=new Date($("date").value);d.setDate(d.getDate()+1);openDate(d.toISOString().slice(0,10));};
+$("date").onchange=()=>openDate($("date").value);
+$("addExercise").onclick=()=>addTraining("", selectedPart);
+$("clearTraining").onclick=()=>{const r=current();r.training=[];state.records[r.date]=r;persist();renderAll();};
+$("loadPrevious").onclick=()=>{const arr=recordArray().filter(r=>r.date<$("date").value && (r.training||[]).length); if(!arr.length)return alert("前回記録がありません"); const r=current(); r.training=JSON.parse(JSON.stringify(arr.at(-1).training)); state.records[r.date]=r;persist();renderAll();};
+$("addMeal").onclick=()=>{const txt=$("mealText").value.trim(); if(!txt)return; const r=current(); r.meals=r.meals||[]; r.meals.push({time:$("mealTime").value,text:txt}); state.records[r.date]=r; $("mealText").value=""; persist(); renderMeals();};
+$("saveMealTemplate").onclick=()=>{const txt=$("mealText").value.trim(); if(!txt)return; state.mealTemplates=[...new Set([...(state.mealTemplates||[]),txt])].slice(-20); persist(); renderMeals();};
+$("saveTarget").onclick=()=>{state.target={weight:$("targetWeight").value,date:$("targetDate").value};persist();renderStats();};
+$("deleteAll").onclick=()=>{if(confirm("全削除しますか？")){state.records={};persist();renderAll();}};
+$("exportJson").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="weight-log-backup.json"; a.click(); URL.revokeObjectURL(a.href);};
+document.querySelectorAll(".range").forEach(b=>b.onclick=()=>{range=b.dataset.range;renderChart();});
+$("openFeedback").onclick=(e)=>{e.preventDefault();$("feedbackModal").classList.add("show");};
+$("closeFeedback").onclick=()=>$("feedbackModal").classList.remove("show");
+$("sendFeedback").onclick=async()=>{
+  const message=$("fbMessage").value.trim(); if(!message)return alert("メッセージを入力してください");
+  if(IS_TEAM){try{const res=await fetch("/api/user-feedback",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({senderName:$("fbName").value,category:$("fbCategory").value,message})}); if(!res.ok)throw new Error(); alert("送信しました");}catch{alert("送信できませんでした。ローカル保存します。");}}
+  const local=JSON.parse(localStorage.getItem("weight-feedback-local")||"[]"); local.unshift({senderName:$("fbName").value,category:$("fbCategory").value,message,sentAt:new Date().toISOString(),read:false}); localStorage.setItem("weight-feedback-local",JSON.stringify(local)); $("fbMessage").value=""; $("feedbackModal").classList.remove("show");
+};
+$("sendAdmin").onclick=async()=>{
+  saveFromForm();
+  const records=recordArray();
+  try{const res=await fetch("/api/records",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({records})}); const data=await res.json(); if(!res.ok)throw new Error(data.error||"送信失敗"); alert(`${data.count}件送信しました`);}catch(e){alert("送信できませんでした: "+e.message);}
+};
+document.querySelectorAll(".tabs a[href^='#']").forEach(a=>a.onclick=()=>document.querySelectorAll(".tabs a").forEach(x=>x.classList.toggle("active",x===a)));
+
+// ── AI フィードバック ──
+const aiFbCache = {};
+let aiFbLoading = false;
+
+function showAiFbResult(type, text) {
+  const el = $("aiFeedbackResult");
+  if (!type) { el.className = ""; el.textContent = ""; return; }
+  el.className = "ai-" + type;
+  el.textContent = text;
+}
+
+$("aiFeedbackBtn").onclick = async () => {
+  if (aiFbLoading) return;
+  const d = $("date").value;
+  if (!d) return;
+  const rec = state.records[d];
+  const hasWeight = rec && Number.isFinite(Number(rec.weight)) && Number(rec.weight) > 0;
+  const hasCal   = rec && Number.isFinite(Number(rec.calories)) && Number(rec.calories) > 0;
+  const hasMeals = rec && Array.isArray(rec.meals) && rec.meals.length > 0;
+  const hasTrain = rec && Array.isArray(rec.training) && rec.training.length > 0;
+  const hasMemo  = rec && rec.note && rec.note.trim().length > 0;
+  if (!hasWeight && !hasCal && !hasMeals && !hasTrain && !hasMemo) {
+    showAiFbResult("empty", "今日の記録がまだ入力されていません。\n体重・食事・トレーニングを入力すると、AIフィードバックを確認できます。");
+    return;
+  }
+  if (aiFbCache[d]) { showAiFbResult("text", aiFbCache[d]); return; }
+  aiFbLoading = true;
+  const btn = $("aiFeedbackBtn");
+  btn.disabled = true; btn.textContent = "チェック中...";
+  showAiFbResult("", "");
+  const payload = {
+    date: d,
+    weight: hasWeight ? Number(rec.weight) : null,
+    calories: hasCal ? Number(rec.calories) : null,
+    meals: (rec.meals || []).map(m => ({time: m.time || "", content: m.text || ""})).filter(m => m.content),
+    trainings: (rec.training || []).flatMap(t =>
+      (t.sets || []).length > 0
+        ? t.sets.map(s => ({part:(t.parts||[]).join("・"), name:t.exercise||"", weight:s.weight!=null?s.weight+"kg":"", reps:s.reps!=null?s.reps+"回":"", sets:""}))
+        : [{part:(t.parts||[]).join("・"), name:t.exercise||"", weight:"", reps:"", sets:""}]
+    ),
+    memo: rec.note || "",
+    targetWeight: state.target ? (Number(state.target.weight) || null) : null,
+    targetDate: state.target ? (state.target.date || "") : "",
+    goalType: "",
+    category: rec.category || ""
+  };
+  try {
+    const res = await fetch("/api/ai-feedback", {method:"POST", headers:{"Content-Type":"application/json"}, cache:"no-store", body:JSON.stringify(payload)});
+    let data; try { data = await res.json(); } catch { throw new Error("parse"); }
+    if (data.ok) { aiFbCache[d] = data.feedback; showAiFbResult("text", data.feedback); }
+    else if (data.message && data.message.includes("入力されていません")) { showAiFbResult("empty", data.message); }
+    else { showAiFbResult("error", data.message || "AIフィードバックを取得できませんでした。時間をおいて再度お試しください。"); }
+  } catch { showAiFbResult("error", "AIフィードバックを取得できませんでした。時間をおいて再度お試しください。"); }
+  finally { aiFbLoading = false; btn.disabled = false; btn.textContent = "今日の内容をチェック"; }
+};
+
+window.addEventListener("resize",renderChart);
+if("serviceWorker" in navigator){navigator.serviceWorker.register("./sw.js").catch(()=>{});}
+renderParts(); renderTemplates(); fillForm(current()); renderAll();
+</script>
+</body>
+</html>

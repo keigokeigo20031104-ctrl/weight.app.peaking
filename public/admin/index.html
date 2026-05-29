@@ -137,11 +137,23 @@
     .tabs a {
       flex:1; max-width:86px; text-align:center;
       text-decoration:none; color:var(--muted);
-      font-size:11px; font-weight:800;
-      padding:8px 4px; border-radius:10px; line-height:1.2;
+      font-size:10px; font-weight:800;
+      padding:6px 4px; border-radius:10px; line-height:1.3;
       transition:background .12s;
+      display:flex; flex-direction:column; align-items:center; gap:2px;
+      position:relative;
     }
     .tabs a.active { background:var(--soft); color:var(--accent); }
+    .tab-icon { font-size:18px; line-height:1; }
+    .tab-badge {
+      position:absolute; top:3px; right:6px;
+      background:var(--danger); color:#fff;
+      font-size:9px; font-weight:900;
+      min-width:16px; height:16px; line-height:16px;
+      border-radius:999px; text-align:center; padding:0 4px;
+      display:none;
+    }
+    .tab-badge.show { display:block; }
 
     /* ── Panels ── */
     .tab-panel[hidden] { display:none; }
@@ -239,7 +251,7 @@
         <button id="fetchRecords">サーバーから最新取得</button>
         <button class="secondary" id="loadLocal">保存済みを表示</button>
       </div>
-      <p id="serverMsg" class="status-msg"></p>
+      <p id="serverMsg" class="status-msg">まだ記録を取得していません。</p>
     </section>
   </div>
 
@@ -278,6 +290,7 @@
       <h2>入力者</h2>
       <div class="users-wrap" id="userList"></div>
       <div class="btn-row">
+        <button class="secondary" id="clearSelection">全入力者を表示</button>
         <button class="danger" id="deleteUser">選択中の入力者を削除</button>
       </div>
     </section>
@@ -323,11 +336,11 @@
 </div>
 
 <nav class="tabs">
-  <a href="#home">ホーム</a>
-  <a href="#records">記録</a>
-  <a href="#users">入力者</a>
-  <a href="#notice">お知らせ</a>
-  <a href="#feedback">意見箱</a>
+  <a href="#home"><span class="tab-icon">🏠</span>ホーム</a>
+  <a href="#records"><span class="tab-icon">📊</span>記録</a>
+  <a href="#users"><span class="tab-icon">👥</span>入力者</a>
+  <a href="#notice"><span class="tab-icon">📢</span>お知らせ</a>
+  <a href="#feedback"><span class="tab-icon">💬</span>意見箱<span class="tab-badge" id="feedbackBadge"></span></a>
 </nav>
 
 <script>
@@ -386,6 +399,10 @@
     $("dash-users").textContent = byUser().length;
     $("dash-unread").textContent = cachedFeedbacks.filter(x => !x.read).length;
     $("dash-notices").textContent = cachedNotices.length;
+    const unreadCount = cachedFeedbacks.filter(x => !x.read).length;
+    const badge = $("feedbackBadge");
+    if (unreadCount > 0) { badge.textContent = unreadCount; badge.classList.add("show"); }
+    else { badge.classList.remove("show"); }
     updateAiMessages();
   }
   function updateAiMessages() {
@@ -475,6 +492,7 @@
     }
   };
   $("loadLocal").onclick = () => { render(); $("serverMsg").textContent = "保存済みデータを表示しました。"; };
+  $("clearSelection").onclick = () => { store.selected = ""; save(); render(); };
   $("deleteUser").onclick = () => {
     if (!store.selected) { alert("入力者を選択してください"); return; }
     if (confirm(store.selected + " の記録をすべて削除しますか？")) {
@@ -499,6 +517,7 @@
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       $("noticeTitle").value = ""; $("noticeContent").value = ""; $("noticeBy").value = "";
       $("noticePostStatus").textContent = "投稿しました。";
+      setTimeout(() => { $("noticePostStatus").textContent = ""; }, 3000);
       fetchNotices();
     } catch (e) {
       $("noticePostStatus").textContent = "投稿できませんでした: " + e.message;

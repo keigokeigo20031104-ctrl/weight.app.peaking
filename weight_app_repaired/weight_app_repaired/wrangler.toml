@@ -1,7 +1,0 @@
-name = "weight-app-peaking"
-main = "_worker.js"
-compatibility_date = "2026-05-29"
-
-[assets]
-directory = "."
-binding = "ASSETS"

@@ -6,94 +6,163 @@
   <title>体重ログ 管理</title>
   <style>
     :root {
-      --bg: #f5f6f2; --ink: #17211f; --muted: #65726e; --line: #d8dfdb;
-      --card: #fff; --accent: #176b5d; --soft: #e3f2ee; --danger: #b42318;
-      --shadow: 0 12px 30px rgba(25,39,36,.08);
+      --bg:#f5f6f2; --ink:#17211f; --muted:#65726e; --line:#d8dfdb;
+      --card:#fff; --accent:#176b5d; --soft:#e3f2ee; --danger:#b42318;
+      --shadow:0 12px 30px rgba(25,39,36,.08);
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif; line-height: 1.5; }
-    .app { max-width: 1080px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 80px); }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans JP",sans-serif; line-height:1.5; overflow-x:hidden; }
 
-    /* ── ヘッダー ── */
-    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-    h1 { margin: 0; font-size: 28px; font-weight: 900; line-height: 1.1; }
-    .subtitle { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-    .badge { flex-shrink: 0; background: var(--soft); color: var(--accent); font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 999px; margin-top: 4px; }
+    /* ── App wrap ── */
+    .app { max-width:1080px; margin:0 auto; padding:calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 88px); }
 
-    /* ── カード ── */
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 20px; padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow); }
-    h2 { margin: 0 0 12px; font-size: 17px; font-weight: 800; }
+    /* ── Header ── */
+    header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:16px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+    h1 { margin:0; font-size:28px; font-weight:900; line-height:1.1; }
+    .subtitle { margin:4px 0 0; color:var(--muted); font-size:13px; }
+    .badge { flex-shrink:0; background:var(--soft); color:var(--accent); font-size:11px; font-weight:800; padding:5px 10px; border-radius:999px; margin-top:2px; }
 
-    /* ── フォーム ── */
-    label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin: 10px 0 4px; }
-    label:first-child { margin-top: 0; }
-    input, textarea, select { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: #fbfcfb; color: var(--ink); font: inherit; min-height: 42px; }
-    textarea { min-height: 80px; resize: vertical; }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(23,107,93,.12); }
+    /* ── Card ── */
+    .card { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:16px; margin-bottom:14px; box-shadow:var(--shadow); }
+    section { scroll-margin-top:16px; }
+    h2 { margin:0 0 12px; font-size:17px; font-weight:800; }
 
-    /* ── ボタン ── */
-    button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--accent); color: #fff; font: inherit; font-weight: 800; font-size: 14px; cursor: pointer; white-space: nowrap; }
-    button.secondary { background: #eef2ef; color: var(--ink); border: 1px solid var(--line); }
-    button.danger { background: var(--danger); color: #fff; }
-    button:disabled { opacity: .6; cursor: default; }
-    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-
-    /* ── 統計グリッド ── */
-    .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
-    .stat { background: #f7faf8; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; }
-    .stat span { display: block; font-size: 12px; color: var(--muted); font-weight: 700; }
-    .stat b { display: block; font-size: 22px; font-variant-numeric: tabular-nums; margin-top: 2px; }
-
-    /* ── ユーザーボタン ── */
-    .users { display: flex; gap: 8px; flex-wrap: wrap; }
-    .userbtn { background: var(--soft); color: var(--accent); font-size: 13px; min-height: 36px; padding: 0 12px; }
-    .userbtn.selected { background: var(--accent); color: #fff; }
-
-    /* ── お知らせアイテム ── */
-    .notice-item { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 10px; background: #fbfcfb; }
-    .notice-item h3 { margin: 0 0 4px; font-size: 15px; }
-    .notice-meta { color: var(--muted); font-size: 12px; margin-top: 8px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
-
-    /* ── 意見箱アイテム ── */
-    .fb-item { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-top: 10px; background: #fbfcfb; }
-    .fb-item.unread { background: #f0faf7; border-color: rgba(23,107,93,.3); }
-    .fb-header { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px; }
-    .fb-cat { background: var(--soft); color: var(--accent); font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; }
-    .fb-new { background: var(--accent); color: #fff; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px; }
-    .fb-msg { font-size: 14px; margin: 4px 0; line-height: 1.6; }
-    .fb-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-    .fb-footer small { color: var(--muted); font-size: 12px; }
-    .sm-btn { min-height: 32px !important; font-size: 12px !important; padding: 0 10px !important; }
-
-    /* ── テーブル ── */
-    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin-top: 10px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
-    th { background: #f0f2f0; font-weight: 800; color: var(--muted); white-space: nowrap; }
-    th, td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
-    tr:last-child td { border-bottom: 0; }
-
-    /* ── タブ ── */
-    .tabs { position: fixed; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,.94); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-top: 1px solid var(--line); display: flex; justify-content: center; padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px); gap: 2px; z-index: 100; }
-    .tabs a { flex: 1; max-width: 88px; text-align: center; text-decoration: none; color: var(--muted); font-size: 11px; font-weight: 800; padding: 8px 2px; border-radius: 10px; line-height: 1.2; }
-    .tabs a.active { background: var(--soft); color: var(--accent); }
-
-    /* ── タブパネル ── */
-    .tab-panel[hidden] { display: none; }
-
-    /* ── ユーティリティ ── */
-    .muted { color: var(--muted); }
-    .hint { font-size: 12px; color: var(--muted); margin: 6px 0 0; }
-    .status-msg { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
-    .mt { margin-top: 12px; }
-
-    @media (min-width: 800px) {
-      .stats { grid-template-columns: repeat(4, 1fr); }
-      .app { padding-left: 20px; padding-right: 20px; }
+    /* ── Form ── */
+    label { display:block; font-size:12px; font-weight:800; color:var(--muted); margin:10px 0 4px; }
+    label:first-child { margin-top:0; }
+    input, textarea, select {
+      display:block; width:100%;
+      border:1px solid var(--line); border-radius:12px;
+      padding:10px 12px; background:#fbfcfb;
+      color:var(--ink); font:inherit; font-size:14px;
+      min-height:42px; margin-bottom:8px;
     }
-    @media (max-width: 440px) {
-      .app { padding-left: 12px; padding-right: 12px; }
-      .card { padding: 14px; }
-      h1 { font-size: 24px; }
+    textarea { min-height:80px; resize:vertical; }
+    input:focus, textarea:focus, select:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(23,107,93,.12); }
+    ::placeholder { color:#a0aba8; }
+
+    /* ── Buttons ── */
+    button {
+      display:inline-flex; align-items:center; justify-content:center; gap:6px;
+      min-height:42px; padding:0 16px; border:0; border-radius:12px;
+      background:var(--accent); color:#fff;
+      font:inherit; font-weight:800; font-size:14px;
+      cursor:pointer; white-space:nowrap; transition:opacity .12s;
+    }
+    button:active { opacity:.85; }
+    button.secondary { background:#eef2ef; color:var(--ink); border:1px solid var(--line); }
+    button.danger { background:var(--danger); color:#fff; }
+    button:disabled { opacity:.55; cursor:default; }
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+
+    /* ── Dashboard ── */
+    .dash-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .dash-stat { background:#f7faf8; border:1px solid var(--line); border-radius:14px; padding:12px; text-align:center; }
+    .dash-stat span { display:block; font-size:11px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+    .dash-stat b { display:block; font-size:24px; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }
+
+    /* ── AI card ── */
+    .ai-card-header { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .ai-logo, .ai-logo-fallback { width:40px; height:40px; border-radius:50%; flex:0 0 auto; }
+    .ai-logo { object-fit:contain; background:var(--soft); padding:6px; }
+    .ai-logo-fallback { display:grid; place-items:center; background:var(--soft); color:var(--accent); font-weight:800; font-size:12px; }
+    .ai-title { font-size:16px; font-weight:900; }
+    .ai-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+    #aiMsgList { margin:10px 0 10px; padding-left:18px; }
+    #aiMsgList li { font-size:13px; margin-bottom:5px; line-height:1.5; }
+
+    /* ── Entry grid ── */
+    .entry-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .entry-card {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:6px; min-height:80px; background:var(--card);
+      border:1px solid var(--line); border-radius:16px;
+      cursor:pointer; font-weight:800; font-size:13px; color:var(--ink);
+      padding:12px 8px; box-shadow:0 2px 8px rgba(25,39,36,.05);
+      transition:background .12s, box-shadow .12s;
+    }
+    .entry-card:hover, .entry-card:active { background:var(--soft); box-shadow:0 4px 14px rgba(23,107,93,.12); }
+    .entry-icon { font-size:22px; line-height:1; }
+
+    /* ── Stats (記録タブ) ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:12px; }
+    .stat-card { background:#f7faf8; border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+    .stat-card span { display:block; font-size:12px; color:var(--muted); font-weight:700; }
+    .stat-card b { display:block; font-size:22px; font-variant-numeric:tabular-nums; margin-top:2px; }
+
+    /* ── Users ── */
+    .users-wrap { display:flex; gap:8px; flex-wrap:wrap; }
+    .userbtn { background:var(--soft); color:var(--accent); font-size:13px; min-height:40px; padding:0 14px; border-radius:999px; }
+    .userbtn.selected { background:var(--accent); color:#fff; }
+
+    /* ── Notice items ── */
+    .notice-item { border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:10px; background:#fbfcfb; }
+    .notice-item:first-child { margin-top:0; }
+    .notice-item h3 { margin:0 0 5px; font-size:15px; }
+    .notice-body { font-size:14px; line-height:1.6; white-space:pre-wrap; }
+    .notice-meta { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .notice-meta small { color:var(--muted); font-size:12px; }
+
+    /* ── Feedback items ── */
+    .fb-item { border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-top:10px; background:#fbfcfb; }
+    .fb-item:first-child { margin-top:0; }
+    .fb-item.unread { background:#f0faf7; border-color:rgba(23,107,93,.28); }
+    .fb-head { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+    .fb-cat { background:var(--soft); color:var(--accent); font-size:11px; font-weight:800; padding:3px 8px; border-radius:999px; }
+    .fb-new { background:var(--accent); color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:999px; }
+    .fb-sender { font-size:13px; font-weight:700; }
+    .fb-msg { font-size:14px; margin:4px 0 8px; line-height:1.6; white-space:pre-wrap; }
+    .fb-footer { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:6px; }
+    .fb-footer small { color:var(--muted); font-size:12px; }
+    .sm-btn { min-height:34px !important; font-size:12px !important; padding:0 10px !important; }
+
+    /* ── Table ── */
+    .table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; margin-top:10px; border-radius:12px; border:1px solid var(--line); }
+    table { width:100%; border-collapse:collapse; font-size:12px; min-width:760px; }
+    th { background:#f0f2f0; font-weight:800; color:var(--muted); white-space:nowrap; font-size:11px; }
+    th, td { border-bottom:1px solid var(--line); padding:8px 10px; text-align:left; vertical-align:top; }
+    tr:last-child td { border-bottom:0; }
+    tbody tr:hover { background:#fafcfb; }
+
+    /* ── Tabs ── */
+    .tabs {
+      position:fixed; left:0; right:0; bottom:0;
+      background:rgba(255,255,255,.94);
+      backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+      border-top:1px solid var(--line);
+      display:flex; justify-content:center;
+      padding:6px 8px calc(env(safe-area-inset-bottom) + 6px);
+      gap:2px; z-index:100;
+    }
+    .tabs a {
+      flex:1; max-width:86px; text-align:center;
+      text-decoration:none; color:var(--muted);
+      font-size:11px; font-weight:800;
+      padding:8px 4px; border-radius:10px; line-height:1.2;
+      transition:background .12s;
+    }
+    .tabs a.active { background:var(--soft); color:var(--accent); }
+
+    /* ── Panels ── */
+    .tab-panel[hidden] { display:none; }
+
+    /* ── Utilities ── */
+    .muted { color:var(--muted); }
+    .hint { font-size:12px; color:var(--muted); margin:6px 0 0; line-height:1.5; }
+    .status-msg { font-size:13px; color:var(--muted); margin:8px 0 0; line-height:1.5; }
+    .empty-state { text-align:center; padding:20px 12px; color:var(--muted); font-size:13px; line-height:1.6; }
+
+    /* ── Responsive ── */
+    @media (min-width:800px) {
+      .dash-grid { grid-template-columns:repeat(4,1fr); }
+      .stats-grid { grid-template-columns:repeat(4,1fr); }
+      .app { padding-left:20px; padding-right:20px; }
+      .card { padding:20px; }
+    }
+    @media (max-width:440px) {
+      .app { padding-left:12px; padding-right:12px; }
+      h1 { font-size:24px; }
+      .card { padding:14px; }
     }
   </style>
 </head>
@@ -107,35 +176,95 @@
     <span class="badge">管理者画面</span>
   </header>
 
-  <!-- ホームタブ -->
+  <!-- ═══ ホームタブ ═══ -->
   <div class="tab-panel" id="tab-home">
+
+    <!-- ダッシュボード -->
+    <section class="card">
+      <h2>今日の管理状況</h2>
+      <div class="dash-grid">
+        <div class="dash-stat"><span>取得済み記録</span><b id="dash-records">0</b></div>
+        <div class="dash-stat"><span>入力者</span><b id="dash-users">0</b></div>
+        <div class="dash-stat"><span>未読意見</span><b id="dash-unread">0</b></div>
+        <div class="dash-stat"><span>お知らせ</span><b id="dash-notices">0</b></div>
+      </div>
+    </section>
+
+    <!-- AIフィードバック -->
+    <section class="card">
+      <div class="ai-card-header">
+        <img src="/assets/chatgpt-logo.svg" alt="ChatGPT" class="ai-logo"
+             onerror="this.style.display='none';document.getElementById('ai-fallback').style.display='grid'">
+        <div class="ai-logo-fallback" id="ai-fallback" style="display:none">GPT</div>
+        <div>
+          <div class="ai-title">AIからのフィードバック</div>
+          <div class="ai-sub">記録や意見箱の内容をもとに、確認すべき点を表示します。</div>
+        </div>
+      </div>
+      <ul id="aiMsgList">
+        <li style="color:var(--muted)">データ読み込み中…</li>
+      </ul>
+      <div class="btn-row">
+        <button id="aiGoRecords" class="secondary" style="font-size:13px;min-height:38px">記録を確認</button>
+        <button id="aiGoFeedback" class="secondary" style="font-size:13px;min-height:38px">意見箱を見る</button>
+      </div>
+    </section>
+
+    <!-- 入口カード -->
+    <section class="card">
+      <h2>メニュー</h2>
+      <div class="entry-grid">
+        <button class="entry-card" data-goto="#records"><span class="entry-icon">📊</span><span>記録を見る</span></button>
+        <button class="entry-card" data-goto="#users"><span class="entry-icon">👥</span><span>入力者を管理</span></button>
+        <button class="entry-card" data-goto="#notice"><span class="entry-icon">📢</span><span>お知らせを投稿</span></button>
+        <button class="entry-card" data-goto="#feedback"><span class="entry-icon">💬</span><span>意見箱を確認</span></button>
+      </div>
+    </section>
+
+    <!-- プロフィール -->
     <section class="card">
       <h2>管理者プロフィール設定</h2>
       <label>管理者名 *</label>
       <input id="adminName" placeholder="例: 田中コーチ">
       <label>役職・説明（任意）</label>
       <input id="adminDesc" placeholder="例: トレーニング担当">
-      <div class="mt"><button id="saveProfile">保存して開始</button></div>
+      <div class="btn-row"><button id="saveProfile">保存して開始</button></div>
     </section>
+
+    <!-- サーバー取得 -->
     <section class="card">
       <h2>サーバー上の記録</h2>
-      <div class="row">
+      <p class="hint">「サーバーから最新取得」を押すと、送信済みの記録を読み込みます。</p>
+      <div class="btn-row">
         <button id="fetchRecords">サーバーから最新取得</button>
-        <button class="secondary" id="loadLocal">ローカル再表示</button>
+        <button class="secondary" id="loadLocal">保存済みを表示</button>
       </div>
-      <p id="serverMsg" class="status-msg">記録を取得していません。</p>
+      <p id="serverMsg" class="status-msg"></p>
     </section>
   </div>
 
-  <!-- 記録タブ -->
+  <!-- ═══ 記録タブ ═══ -->
   <div class="tab-panel" id="tab-records" hidden>
     <section class="card">
+      <h2>個別記録サマリー</h2>
+      <p id="recordsHint" class="hint" style="margin-bottom:8px"></p>
+      <div class="stats-grid">
+        <div class="stat-card"><span>最新体重</span><b id="latest">--</b></div>
+        <div class="stat-card"><span>7日変化</span><b id="diff7">--</b></div>
+        <div class="stat-card"><span>30日変化</span><b id="diff30">--</b></div>
+        <div class="stat-card"><span>平均摂取</span><b id="avgCal">--</b></div>
+      </div>
+    </section>
+    <section class="card">
       <h2>記録一覧</h2>
-      <p class="hint">入力者タブで選択すると絞り込めます。</p>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>日付</th><th>体重</th><th>kcal</th><th>食事</th><th>トレーニング</th><th>メモ</th><th>学年</th><th>カテゴリ</th></tr>
+            <tr>
+              <th>日付</th><th>体重</th><th>kcal</th>
+              <th>食事</th><th>トレーニング</th><th>メモ</th>
+              <th>学年</th><th>カテゴリ</th>
+            </tr>
           </thead>
           <tbody id="recordRows"></tbody>
         </table>
@@ -143,37 +272,28 @@
     </section>
   </div>
 
-  <!-- 入力者タブ -->
+  <!-- ═══ 入力者タブ ═══ -->
   <div class="tab-panel" id="tab-users" hidden>
     <section class="card">
       <h2>入力者</h2>
-      <div class="users" id="userList"></div>
-      <div class="mt">
+      <div class="users-wrap" id="userList"></div>
+      <div class="btn-row">
         <button class="danger" id="deleteUser">選択中の入力者を削除</button>
-      </div>
-    </section>
-    <section class="card">
-      <h2>個別記録サマリー</h2>
-      <div class="stats">
-        <div class="stat"><span>最新体重</span><b id="latest">-- kg</b></div>
-        <div class="stat"><span>7日変化</span><b id="diff7">--</b></div>
-        <div class="stat"><span>30日変化</span><b id="diff30">--</b></div>
-        <div class="stat"><span>平均摂取</span><b id="avgCal">--</b></div>
       </div>
     </section>
   </div>
 
-  <!-- お知らせタブ -->
+  <!-- ═══ お知らせタブ ═══ -->
   <div class="tab-panel" id="tab-notice" hidden>
     <section class="card">
       <h2>お知らせを投稿</h2>
-      <label>タイトル</label>
-      <input id="noticeTitle" placeholder="タイトル（任意）">
+      <label>タイトル（任意）</label>
+      <input id="noticeTitle" placeholder="例: 練習日程の変更">
       <label>内容 *</label>
       <textarea id="noticeContent" placeholder="お知らせの内容を入力してください"></textarea>
-      <label>投稿者名</label>
-      <input id="noticeBy" placeholder="投稿者名（任意）">
-      <div class="mt"><button id="postNotice">📢 投稿する</button></div>
+      <label>投稿者名（任意）</label>
+      <input id="noticeBy" placeholder="例: 田中コーチ">
+      <div class="btn-row"><button id="postNotice">📢 投稿する</button></div>
       <p id="noticePostStatus" class="hint"></p>
     </section>
     <section class="card">
@@ -182,14 +302,19 @@
     </section>
   </div>
 
-  <!-- 意見箱タブ -->
+  <!-- ═══ 意見箱タブ ═══ -->
   <div class="tab-panel" id="tab-feedback" hidden>
     <section class="card">
       <h2>意見箱</h2>
-      <div class="row" style="margin-bottom:12px">
+      <p class="hint" style="margin-bottom:10px">届いた意見を確認・管理できます。</p>
+      <div class="btn-row" style="margin-top:0;margin-bottom:12px">
         <button class="secondary" id="fetchFeedback">再読み込み</button>
-        <select id="fbFilter" style="flex:1;max-width:180px;min-height:42px">
-          <option>すべて</option><option>バグ報告</option><option>機能要望</option><option>その他</option><option>未読のみ</option>
+        <select id="fbFilter" style="flex:1;max-width:180px;margin-bottom:0">
+          <option>すべて</option>
+          <option>バグ報告</option>
+          <option>機能要望</option>
+          <option>その他</option>
+          <option>未読のみ</option>
         </select>
       </div>
       <div id="feedbackList"><p class="hint">読み込み中…</p></div>
@@ -208,6 +333,8 @@
 <script>
   const $ = id => document.getElementById(id);
   let store = JSON.parse(localStorage.getItem("weight-admin-v1") || '{"records":[],"profile":{},"selected":""}');
+  let cachedNotices = [];
+  let cachedFeedbacks = [];
 
   function save() { localStorage.setItem("weight-admin-v1", JSON.stringify(store)); }
   function byUser() { return [...new Set(store.records.map(r => r.user || "unknown"))].sort((a, b) => a.localeCompare(b, "ja")); }
@@ -215,8 +342,10 @@
   function volume(t = []) { return t.reduce((s, i) => s + (i.sets || []).reduce((a, b) => a + (Number(b.weight) || 0) * (Number(b.reps) || 0), 0), 0); }
   function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
   function fmtDate(iso) {
-    try { const d = new Date(iso); return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; }
-    catch { return iso || ""; }
+    try {
+      const d = new Date(iso);
+      return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    } catch { return iso || ""; }
   }
 
   // ── タブ切り替え ──
@@ -239,7 +368,42 @@
       if (h === "#feedback") fetchFeedback();
     });
   });
+  document.querySelectorAll(".entry-card[data-goto]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const h = btn.dataset.goto;
+      showTab(h);
+      if (h === "#notice") fetchNotices();
+      if (h === "#feedback") fetchFeedback();
+    });
+  });
+  $("aiGoRecords").onclick = () => showTab("#records");
+  $("aiGoFeedback").onclick = () => { showTab("#feedback"); fetchFeedback(); };
   window.addEventListener("hashchange", () => showTab(location.hash));
+
+  // ── ダッシュボード ──
+  function updateDashboard() {
+    $("dash-records").textContent = store.records.length;
+    $("dash-users").textContent = byUser().length;
+    $("dash-unread").textContent = cachedFeedbacks.filter(x => !x.read).length;
+    $("dash-notices").textContent = cachedNotices.length;
+    updateAiMessages();
+  }
+  function updateAiMessages() {
+    const msgs = [];
+    if (store.records.length === 0) {
+      msgs.push("まだ記録データがありません。サーバーから記録を取得してください。");
+    } else {
+      msgs.push(`取得済み記録 ${store.records.length} 件。入力者ごとの変化を確認できます。`);
+    }
+    const unread = cachedFeedbacks.filter(x => !x.read).length;
+    if (unread > 0) {
+      msgs.push(`未読の意見が ${unread} 件あります。意見箱を確認してください。`);
+    }
+    if (cachedNotices.length === 0) {
+      msgs.push("投稿済みのお知らせがありません。必要に応じてお知らせを投稿してください。");
+    }
+    $("aiMsgList").innerHTML = msgs.map(m => `<li>${esc(m)}</li>`).join("");
+  }
 
   // ── render ──
   function render() {
@@ -247,14 +411,15 @@
     $("adminDesc").value = store.profile.desc || "";
 
     const users = byUser();
-    $("userList").innerHTML = users.map(u =>
-      `<button class="userbtn${store.selected === u ? " selected" : ""}" data-u="${esc(u)}">${esc(u)}</button>`
-    ).join("") || '<p class="muted" style="font-size:13px">サーバーから記録を取得すると入力者を選べます。</p>';
+    $("userList").innerHTML = users.length
+      ? users.map(u => `<button class="userbtn${store.selected === u ? " selected" : ""}" data-u="${esc(u)}">${esc(u)}</button>`).join("")
+      : '<p class="empty-state">まだ入力者データがありません。<br>サーバーから記録を取得すると、ここに入力者が表示されます。</p>';
     document.querySelectorAll("[data-u]").forEach(b => b.onclick = () => { store.selected = b.dataset.u; save(); render(); });
 
     const rows = currentRecords();
+    $("recordsHint").textContent = store.selected ? `選択中: ${store.selected}` : "すべての入力者の記録を表示しています。";
     const latest = rows.at(-1);
-    $("latest").textContent = latest ? latest.weight + " kg" : "-- kg";
+    $("latest").textContent = latest ? latest.weight + " kg" : "--";
     function diff(days) {
       if (rows.length < 2) return "--";
       const end = new Date(rows.at(-1).date);
@@ -265,22 +430,23 @@
     $("diff30").textContent = diff(30);
     const cals = rows.map(r => Number(r.calories)).filter(Number.isFinite);
     $("avgCal").textContent = cals.length ? Math.round(cals.reduce((a, b) => a + b, 0) / cals.length) + " kcal" : "--";
-
-    $("recordRows").innerHTML = [...rows].reverse().map(r =>
-      `<tr>
-        <td style="white-space:nowrap">${esc(r.date)}</td>
-        <td>${esc(String(r.weight || ""))}</td>
-        <td>${r.calories ?? ""}</td>
-        <td style="max-width:130px">${(r.meals || []).map(m => esc((m.time || "") + " " + (m.text || ""))).join("<br>")}</td>
-        <td style="max-width:150px">${(r.training || []).map(t => esc((t.exercise || "") + " " + volume([t]).toFixed(1))).join("<br>")}</td>
-        <td style="max-width:120px">${esc(r.note || "")}</td>
-        <td>${esc(r.grade || "")}</td>
-        <td>${esc(r.category || "")}</td>
-      </tr>`
-    ).join("");
+    $("recordRows").innerHTML = rows.length
+      ? [...rows].reverse().map(r =>
+          `<tr>
+            <td style="white-space:nowrap">${esc(r.date)}</td>
+            <td>${esc(String(r.weight || ""))}</td>
+            <td>${r.calories ?? ""}</td>
+            <td style="max-width:120px">${(r.meals || []).map(m => esc(`${m.time || ""} ${m.text || ""}`)).join("<br>")}</td>
+            <td style="max-width:140px">${(r.training || []).map(t => esc(`${t.exercise || ""} ${volume([t]).toFixed(1)}`)).join("<br>")}</td>
+            <td style="max-width:120px">${esc(r.note || "")}</td>
+            <td>${esc(r.grade || "")}</td>
+            <td>${esc(r.category || "")}</td>
+          </tr>`).join("")
+      : `<tr><td colspan="8" class="empty-state">まだデータがありません。サーバーから取得すると、ここに表示されます。</td></tr>`;
+    updateDashboard();
   }
 
-  // ── プロフィール保存 ──
+  // ── プロフィール ──
   $("saveProfile").onclick = () => {
     store.profile = { name: $("adminName").value.trim(), desc: $("adminDesc").value.trim() };
     save();
@@ -297,9 +463,10 @@
       const res = await fetch("/api/records?consume=1");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      store.records = [...store.records, ...(data.records || [])];
+      const newRecords = data.records || [];
+      store.records = [...store.records, ...newRecords];
       save();
-      $("serverMsg").textContent = `${data.records?.length || 0} 件取得しました`;
+      $("serverMsg").textContent = `${newRecords.length} 件の記録を取得しました。`;
       render();
     } catch (e) {
       $("serverMsg").textContent = "取得できませんでした: " + e.message;
@@ -307,8 +474,7 @@
       btn.disabled = false; btn.textContent = "サーバーから最新取得";
     }
   };
-  $("loadLocal").onclick = () => { render(); $("serverMsg").textContent = "ローカルデータを表示しました。"; };
-
+  $("loadLocal").onclick = () => { render(); $("serverMsg").textContent = "保存済みデータを表示しました。"; };
   $("deleteUser").onclick = () => {
     if (!store.selected) { alert("入力者を選択してください"); return; }
     if (confirm(store.selected + " の記録をすべて削除しますか？")) {
@@ -318,7 +484,7 @@
     }
   };
 
-  // ── お知らせ投稿 ──
+  // ── お知らせ ──
   $("postNotice").onclick = async () => {
     const btn = $("postNotice");
     const content = $("noticeContent").value.trim();
@@ -327,8 +493,7 @@
     $("noticePostStatus").textContent = "";
     try {
       const res = await fetch("/api/notice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: $("noticeTitle").value.trim(), content, postedBy: $("noticeBy").value.trim() || store.profile.name })
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -341,22 +506,22 @@
       btn.disabled = false; btn.textContent = "📢 投稿する";
     }
   };
-
   async function fetchNotices() {
     try {
       const d = await (await fetch("/api/notice")).json();
-      const notices = d.notices || [];
-      $("noticeList").innerHTML = notices.length
-        ? notices.map(n => `
+      cachedNotices = d.notices || [];
+      updateDashboard();
+      $("noticeList").innerHTML = cachedNotices.length
+        ? cachedNotices.map(n => `
           <div class="notice-item">
             <h3>${esc(n.title || "お知らせ")}</h3>
-            <p style="margin:4px 0;font-size:14px;line-height:1.6">${esc(n.content)}</p>
+            <div class="notice-body">${esc(n.content)}</div>
             <div class="notice-meta">
-              <span>${esc(n.postedBy || "")}${n.postedBy ? " · " : ""}${fmtDate(n.postedAt)}</span>
+              <small>${esc(n.postedBy || "")}${n.postedBy ? " · " : ""}${fmtDate(n.postedAt)}</small>
               <button class="danger sm-btn" data-del-notice="${esc(n.id)}">削除</button>
             </div>
           </div>`).join("")
-        : '<p class="hint">投稿済みのお知らせはありません。</p>';
+        : '<div class="empty-state">投稿済みのお知らせはありません。</div>';
       document.querySelectorAll("[data-del-notice]").forEach(btn => {
         btn.onclick = async () => {
           if (!confirm("このお知らせを削除しますか？")) return;
@@ -368,7 +533,7 @@
         };
       });
     } catch {
-      $("noticeList").innerHTML = '<p class="hint">取得できませんでした。</p>';
+      $("noticeList").innerHTML = '<div class="empty-state">取得できませんでした。</div>';
     }
   }
 
@@ -378,28 +543,30 @@
   async function fetchFeedback() {
     try {
       const d = await (await fetch("/api/user-feedback")).json();
-      let items = d.feedbacks || [];
+      cachedFeedbacks = d.feedbacks || [];
+      updateDashboard();
+      let items = cachedFeedbacks;
       const f = $("fbFilter").value;
       if (f === "未読のみ") items = items.filter(x => !x.read);
       else if (f !== "すべて") items = items.filter(x => x.category === f);
       $("feedbackList").innerHTML = items.length
         ? items.map(x => `
           <div class="fb-item ${x.read ? "" : "unread"}">
-            <div class="fb-header">
+            <div class="fb-head">
               <span class="fb-cat">${esc(x.category || "その他")}</span>
               ${!x.read ? '<span class="fb-new">未読</span>' : ""}
-              <span style="font-size:13px;font-weight:700">${esc(x.senderName || "匿名")}</span>
+              <span class="fb-sender">${esc(x.senderName || "匿名")}</span>
             </div>
             <p class="fb-msg">${esc(x.message)}</p>
             <div class="fb-footer">
               <small>${fmtDate(x.sentAt)}</small>
-              <div class="row">
+              <div style="display:flex;gap:6px">
                 ${!x.read ? `<button class="secondary sm-btn" data-fb-read="${esc(x.id)}">既読</button>` : ""}
                 <button class="danger sm-btn" data-fb-del="${esc(x.id)}">削除</button>
               </div>
             </div>
           </div>`).join("")
-        : '<p class="hint">意見はありません。</p>';
+        : '<div class="empty-state">意見はありません。</div>';
       document.querySelectorAll("[data-fb-read]").forEach(btn => {
         btn.onclick = async () => {
           btn.disabled = true;
@@ -421,7 +588,7 @@
         };
       });
     } catch {
-      $("feedbackList").innerHTML = '<p class="hint">取得できませんでした。</p>';
+      $("feedbackList").innerHTML = '<div class="empty-state">取得できませんでした。</div>';
     }
   }
 

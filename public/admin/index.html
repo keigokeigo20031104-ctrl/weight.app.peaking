@@ -224,14 +224,18 @@
       </div>
     </section>
 
-    <!-- 入口カード -->
+    <!-- サーバーデータ状態 -->
     <section class="card">
-      <h2>メニュー</h2>
-      <div class="entry-grid">
-        <button class="entry-card" data-goto="#records"><span class="entry-icon">📊</span><span>記録を見る</span></button>
-        <button class="entry-card" data-goto="#users"><span class="entry-icon">👥</span><span>入力者を管理</span></button>
-        <button class="entry-card" data-goto="#notice"><span class="entry-icon">📢</span><span>お知らせを投稿</span></button>
-        <button class="entry-card" data-goto="#feedback"><span class="entry-icon">💬</span><span>意見箱を確認</span></button>
+      <h2>サーバーデータ状態</h2>
+      <p id="serverMsg" class="status-msg">サーバーデータを取得中…</p>
+      <div class="dash-grid" style="grid-template-columns:repeat(3,1fr)">
+        <div class="dash-stat"><span>最終取得</span><b id="lastFetchTime" style="font-size:14px">--</b></div>
+        <div class="dash-stat"><span>今回取得</span><b id="lastFetchCount">0</b></div>
+        <div class="dash-stat"><span>状態</span><b id="fetchState" style="font-size:14px">--</b></div>
+      </div>
+      <div class="btn-row">
+        <button id="copyFetched">取得データをコピー</button>
+        <button class="secondary" id="refetch" style="min-height:38px">再取得</button>
       </div>
     </section>
 
@@ -243,17 +247,6 @@
       <label>役職・説明（任意）</label>
       <input id="adminDesc" placeholder="例: トレーニング担当">
       <div class="btn-row"><button id="saveProfile">保存して開始</button></div>
-    </section>
-
-    <!-- サーバー取得 -->
-    <section class="card">
-      <h2>サーバー上の記録</h2>
-      <p class="hint">「サーバーから最新取得」を押すと、送信済みの記録を読み込みます。</p>
-      <div class="btn-row">
-        <button id="fetchRecords">サーバーから最新取得</button>
-        <button class="secondary" id="loadLocal">保存済みを表示</button>
-      </div>
-      <p id="serverMsg" class="status-msg">まだ記録を取得していません。</p>
     </section>
   </div>
 
@@ -313,7 +306,7 @@
   <!-- ═══ お知らせタブ ═══ -->
   <div class="tab-panel" id="tab-notice" hidden>
     <section class="card">
-      <h2>お知らせを投稿</h2>
+      <h2>お知らせ投稿</h2>
       <label>タイトル（任意）</label>
       <input id="noticeTitle" placeholder="例: 練習日程の変更">
       <label>内容 *</label>
@@ -395,14 +388,6 @@
       if (h === "#feedback") fetchFeedback();
     });
   });
-  document.querySelectorAll(".entry-card[data-goto]").forEach(btn => {
-    btn.addEventListener("click", () => {
-      const h = btn.dataset.goto;
-      showTab(h);
-      if (h === "#notice") fetchNotices();
-      if (h === "#feedback") fetchFeedback();
-    });
-  });
   $("aiGoRecords").onclick = () => showTab("#records");
   $("aiGoFeedback").onclick = () => { showTab("#feedback"); fetchFeedback(); };
   window.addEventListener("hashchange", () => showTab(location.hash));
@@ -437,10 +422,10 @@
     }
     const unread = cachedFeedbacks.filter(x => !x.read).length;
     if (unread > 0) {
-      msgs.push(`未読の意見が ${unread} 件あります。意見箱を確認してください。`);
+      msgs.push(`未読の意見が ${unread} 件あります。意見箱をチェックしてください。`);
     }
     if (cachedNotices.length === 0) {
-      msgs.push("投稿済みのお知らせがありません。必要に応じてお知らせを投稿してください。");
+      msgs.push("投稿済みのお知らせがありません。必要に応じてお知らせの投稿をご検討ください。");
     }
     $("aiMsgList").innerHTML = msgs.map(m => `<li>${esc(m)}</li>`).join("");
   }
@@ -527,26 +512,114 @@
     setTimeout(() => { btn.textContent = "保存して開始"; }, 1500);
   };
 
-  // ── 記録取得 ──
-  $("fetchRecords").onclick = async () => {
-    const btn = $("fetchRecords");
-    btn.disabled = true; btn.textContent = "取得中…";
+  // ── サーバーデータ取得（自動 / 取得後削除 consume=1） ──
+  let fetching = false;
+
+  // 取得データを user+date でローカル統合（重複は新しい方で上書き）。今回取得件数を返す。
+  function mergeRecords(incoming) {
+    const map = new Map();
+    for (const r of store.records) map.set((r.user || "") + "|" + r.date, r);
+    for (const r of incoming) map.set((r.user || "") + "|" + r.date, r);
+    store.records = [...map.values()];
+    return incoming.length;
+  }
+
+  function updateServerStatus() {
+    const lf = store.lastFetch || {};
+    $("lastFetchTime").textContent = lf.at ? fmtDate(lf.at) : "--";
+    $("lastFetchCount").textContent = (lf.count != null ? lf.count : 0) + "件";
+    $("fetchState").textContent = lf.state || "--";
+    const hasData = !!(lf.records && lf.records.length);
+    $("copyFetched").disabled = !hasData;
+  }
+
+  async function autoFetch() {
+    if (fetching) return;
+    fetching = true;
+    $("serverMsg").textContent = "サーバーデータを取得中…";
+    $("refetch").disabled = true;
     try {
       const res = await fetch("/api/records?consume=1");
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-      const newRecords = data.records || [];
-      store.records = [...store.records, ...newRecords];
+      const incoming = data.records || [];
+      const count = mergeRecords(incoming);
+      store.lastFetch = {
+        at: new Date().toISOString(),
+        count,
+        state: count > 0 ? "取得済み" : "新規データなし",
+        records: incoming
+      };
       save();
-      $("serverMsg").textContent = `${newRecords.length} 件の記録を取得しました。`;
+      $("serverMsg").textContent = count > 0
+        ? `${count}件のサーバーデータを取得しました。\n取得したデータは管理者画面に保存され、サーバー側から削除されました。`
+        : "新しいサーバーデータはありません。";
       render();
+      updateServerStatus();
     } catch (e) {
-      $("serverMsg").textContent = "取得できませんでした: " + e.message;
+      if (store.lastFetch) store.lastFetch.state = "取得失敗";
+      $("serverMsg").textContent = "サーバーデータを取得できませんでした。通信状態を確認してください。";
+      updateServerStatus();
     } finally {
-      btn.disabled = false; btn.textContent = "サーバーから最新取得";
+      fetching = false;
+      $("refetch").disabled = false;
     }
+  }
+
+  $("refetch").onclick = autoFetch;
+
+  // ── 取得データを読みやすいテキストに整形してコピー ──
+  function buildCopyText(lf) {
+    const lines = [
+      "【取得データ】",
+      `取得日時：${fmtDate(lf.at)}`,
+      `取得件数：${lf.records.length}件`
+    ];
+    lf.records.forEach((r, idx) => {
+      lines.push("", `【${idx + 1}】`);
+      lines.push(`入力者：${r.user || ""}`);
+      lines.push(`日付：${r.date || ""}`);
+      lines.push(`体重：${r.weight != null ? r.weight + " kg" : "--"}`);
+      lines.push(`摂取カロリー：${r.calories != null ? r.calories + " kcal" : "--"}`);
+      if (r.grade) lines.push(`学年：${r.grade}`);
+      if (r.category) lines.push(`カテゴリ：${r.category}`);
+      if (r.note) lines.push(`メモ：${r.note}`);
+      if ((r.meals || []).length) {
+        lines.push("", "食事：");
+        r.meals.forEach(m => lines.push(`- ${m.time || ""} ${m.text || ""}`.trim()));
+      }
+      if ((r.training || []).length) {
+        lines.push("", "トレーニング：");
+        r.training.forEach(t => {
+          lines.push(`- ${t.exercise || (t.parts || []).join("・") || "種目"}`);
+          (t.sets || []).forEach(s => {
+            if (s.weight != null || s.reps != null) {
+              lines.push(`  ${s.weight != null ? s.weight + "kg" : "--"} × ${s.reps != null ? s.reps + "回" : "--"}`);
+            }
+          });
+        });
+      }
+    });
+    return lines.join("\n");
+  }
+
+  $("copyFetched").onclick = async () => {
+    const lf = store.lastFetch;
+    if (!lf || !lf.records || !lf.records.length) { alert("コピーできる取得データがありません。"); return; }
+    const text = buildCopyText(lf);
+    const btn = $("copyFetched");
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch {}
+      document.body.removeChild(ta);
+    }
+    btn.textContent = "✓ コピーしました";
+    setTimeout(() => { btn.textContent = "取得データをコピー"; }, 1500);
   };
-  $("loadLocal").onclick = () => { render(); $("serverMsg").textContent = "保存済みデータを表示しました。"; };
   $("clearSelection").onclick = () => { store.selected = ""; save(); render(); };
   $("userFilter").onchange = () => { store.selected = $("userFilter").value; save(); render(); };
   $("deleteUser").onclick = () => {
@@ -670,6 +743,8 @@
   // ── 初期化 ──
   render();
   showTab(location.hash || "#home");
+  updateServerStatus();
+  autoFetch();          // 管理者画面を開いたら自動でサーバーデータを取得
   fetchNotices();
   fetchFeedback();
 </script>

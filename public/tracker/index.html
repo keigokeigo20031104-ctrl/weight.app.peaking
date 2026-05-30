@@ -26,6 +26,22 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:14px;box-shadow:var(--shadow)}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row>*{flex:1}.row .small{flex:0 0 auto}
 
+    /* ── Form layout (form-stack / field / actions) ── */
+    .form-stack{display:flex;flex-direction:column;gap:12px}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field>label{margin:0}
+    .field>input,.field>select,.field>textarea{margin:0}
+    .grid-2{display:grid;grid-template-columns:1fr;gap:12px}
+    .actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .actions>button,.actions>input{width:100%}
+    .actions .subtle{order:99}
+    @media(min-width:560px){
+      .grid-2{grid-template-columns:1fr 1fr}
+      .actions{flex-direction:row;flex-wrap:wrap;align-items:center}
+      .actions>button,.actions>input{width:auto;flex:1}
+      .actions .subtle{flex:0 0 auto}
+    }
+
     label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:8px 0 3px}
     input,textarea,select{width:100%;border:1px solid var(--line);border-radius:12px;padding:0 12px;min-height:44px;background:#fff;color:var(--ink)}
     textarea{min-height:76px;padding:10px 12px;resize:vertical}
@@ -114,19 +130,21 @@
           <input type="date" id="date">
           <button class="secondary small" id="nextDay">›</button>
         </div>
-        <label>入力者名</label><input id="user" placeholder="名前">
-        <div class="row">
-          <div><label>学年</label><select id="grade"><option>1年</option><option>2年</option><option>3年</option><option>その他</option></select></div>
-          <div><label>カテゴリ</label><select id="category"><option>ボディ</option><option>パワー</option></select></div>
+        <div class="form-stack" style="margin-top:12px">
+          <div class="field"><label>入力者名</label><input id="user" placeholder="名前"></div>
+          <div class="grid-2">
+            <div class="field"><label>学年</label><select id="grade"><option>1年</option><option>2年</option><option>3年</option><option>その他</option></select></div>
+            <div class="field"><label>カテゴリ</label><select id="category"><option>ボディ</option><option>パワー</option></select></div>
+          </div>
+          <div class="field"><label>体重 kg</label><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="例 70.5"></div>
+          <div class="field"><label>摂取カロリー kcal</label><input id="calories" type="number" inputmode="numeric" placeholder="例 2500"></div>
+          <div class="field"><label>メモ</label><textarea id="note" placeholder="体調、睡眠、反省など"></textarea></div>
         </div>
-        <label>体重 kg</label><input id="weight" type="number" step="0.1" inputmode="decimal" placeholder="例 70.5">
-        <label>摂取カロリー kcal</label><input id="calories" type="number" inputmode="numeric" placeholder="例 2500">
-        <label>メモ</label><textarea id="note" placeholder="体調、睡眠、反省など"></textarea>
-        <div class="row">
+        <div class="actions">
           <button id="save">保存</button>
           <button class="send hidden" id="sendAdmin">管理者に送信</button>
+          <button class="ghost subtle" id="clearInput">入力クリア</button>
         </div>
-        <div class="row" style="margin-top:8px"><button class="secondary small" id="clearInput">入力クリア</button></div>
       </section>
 
       <section class="card">
@@ -164,16 +182,19 @@
       <section class="card">
         <h2>部位を選ぶ</h2>
         <div class="parts" id="partButtons"></div>
-        <h2 style="margin-top:6px">種目を追加</h2>
+      </section>
+
+      <section class="card">
+        <h2>種目を追加</h2>
         <div class="tmpl-wrap" id="templateList"></div>
-        <div class="row" style="margin-top:10px">
+        <div class="actions">
           <input id="newTemplate" placeholder="種目を自由に追加">
-          <button class="secondary small" id="addTemplate">テンプレ追加</button>
+          <button class="secondary subtle" id="addTemplate">テンプレ追加</button>
         </div>
-        <div class="row" style="margin-top:10px">
-          <button class="secondary" id="loadPrevious">前回を呼び出し</button>
+        <div class="actions">
           <button id="addExercise">＋ 種目を追加</button>
-          <button class="secondary small" id="clearTraining">クリア</button>
+          <button class="secondary" id="loadPrevious">前回を呼び出し</button>
+          <button class="ghost subtle" id="clearTraining">クリア</button>
         </div>
       </section>
 
@@ -189,8 +210,11 @@
     <div class="grid">
       <section class="card">
         <h2>食事を追加</h2>
-        <div class="row"><input id="mealTime" type="time"><input id="mealText" placeholder="食事内容"></div>
-        <div class="row" style="margin-top:8px">
+        <div class="grid-2">
+          <div class="field"><label>時刻</label><input id="mealTime" type="time"></div>
+          <div class="field"><label>内容</label><input id="mealText" placeholder="食事内容"></div>
+        </div>
+        <div class="actions">
           <button id="addMeal">＋ 食事を追加</button>
           <button class="secondary" id="saveMealTemplate">よく使う食事に保存</button>
         </div>
@@ -220,11 +244,11 @@
 
       <section class="card">
         <h2>目標設定</h2>
-        <div class="row">
-          <div><label>目標体重 kg</label><input id="targetWeight" type="number" step="0.1"></div>
-          <div><label>目標日程</label><input id="targetDate" type="date"></div>
+        <div class="grid-2">
+          <div class="field"><label>目標体重 kg</label><input id="targetWeight" type="number" step="0.1"></div>
+          <div class="field"><label>目標日程</label><input id="targetDate" type="date"></div>
         </div>
-        <div class="row" style="margin-top:8px"><button class="secondary" id="saveTarget">目標を保存</button></div>
+        <div class="actions"><button class="secondary" id="saveTarget">目標を保存</button></div>
       </section>
     </div>
   </div>
@@ -252,10 +276,12 @@
 
 <div class="modal" id="feedbackModal"><div class="panel">
   <div class="row"><h2 style="flex:1">意見を送る</h2><button class="secondary small" id="closeFeedback">×</button></div>
-  <label>送信者名（任意）</label><input id="fbName">
-  <label>カテゴリ</label><select id="fbCategory"><option>バグ報告</option><option>機能要望</option><option>その他</option></select>
-  <label>メッセージ *</label><textarea id="fbMessage"></textarea>
-  <button id="sendFeedback" style="margin-top:10px">送信する</button>
+  <div class="form-stack" style="margin-top:8px">
+    <div class="field"><label>送信者名（任意）</label><input id="fbName"></div>
+    <div class="field"><label>カテゴリ</label><select id="fbCategory"><option>バグ報告</option><option>機能要望</option><option>その他</option></select></div>
+    <div class="field"><label>メッセージ *</label><textarea id="fbMessage"></textarea></div>
+  </div>
+  <div class="actions"><button id="sendFeedback">送信する</button></div>
 </div></div>
 
 <nav class="tabs">

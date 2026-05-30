@@ -456,6 +456,10 @@ export default {
     if (url.pathname === "/api/ai-feedback") {
       return handleAiFeedbackApi(request, env);
     }
+    // ディレクトリURLは末尾スラッシュ付きの正規URLへリダイレクト（/tracker → /tracker/ など）
+    if (["/tracker", "/solo", "/admin", "/feedback"].includes(url.pathname)) {
+      return Response.redirect(`${url.origin}${url.pathname}/`, 308);
+    }
     return env.ASSETS.fetch(request);
   }
 };

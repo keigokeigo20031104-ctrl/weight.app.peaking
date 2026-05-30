@@ -1,4 +1,4 @@
-name = "weight-app-peaking"
+name = "peaking-application"
 main = "_worker.js"
 compatibility_date = "2026-05-29"
 
